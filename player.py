@@ -2,9 +2,11 @@ import copy
 from math import sqrt, log
 import random
 from mytool import *
+import time
 
-C = 2           # constant for ucb function
-endPoint = 20   # decide when to end buildTree 
+C = 2               # constant for ucb function
+rollOutTime = 500   # number of roll out time
+buildTreeTime = 100 # decide the amount of time to build tree
 
 class treeNode():
     def __init__(self, board: list, visit: int, score: int, oldPos: tuple, newPos: tuple):
@@ -53,66 +55,60 @@ def rollOut(board: list, player: int, n: int) -> int:
 
 def buildTree(node: treeNode, player: int) -> int:
     currNode = node
+    score = 0
     if len(node.child) == 0:    # check if this is leaf node, 0 mean leaf node
         if node.visit == 0:     # check if this node has been visited before, 0 mean hasn't
-            score = rollOut(node.board, -1, 60)
+            score = rollOut(node.board, -1, rollOutTime)
         else:
-            currBoard = currNode.board
+            # currBoard = copy.deepcopy(currNode.board)
+            thereIsPlayer = False   # this variable is used to check if there is our player in the 
             for i in range(5):
                 for j in range(5):
-                    if currBoard[i][j] == player:
-                        lm = legal_move(currBoard, (i, j))
+                    if currNode.board[i][j] == player:
+                        thereIsPlayer = True
+                        lm = legal_move(currNode.board, (i, j))
                         if len(lm) == 0:
-                            lm.append(1)
+                            continue
                         for move in lm:
+                            currBoard = copy.deepcopy(currNode.board)
                             node.child.append(treeNode(make_a_move(currBoard, (i, j), move), 0, 0, (i, j), move))
-            score = buildTree(node.child[0], player)
+            if thereIsPlayer:
+                score = buildTree(node.child[0], player)
 
     else:
         maxUcb = -1
+        bestNode = None
         for n in node.child:
             temp = ucb(n)
             if temp > maxUcb:
                 maxUcb = temp
                 bestNode = n
-        score = buildTree(bestNode, player)
+        if bestNode != None:
+            score = buildTree(bestNode, player)
+        else: score = buildTree(node.child[0], player)
 
     node.visit += 1
     node.score += score
     return score
 
-
-
-def move(board: list, player: int):
+def moveNoTime(board: list, player: int):
     root = treeNode(board, 0, 0, (), ())
     
-    for i in range(100):
+    for i in range(buildTreeTime):
         buildTree(root, -1)
     
-    bestScore = -1
+    bestScore = -9999
     bestNode = None
     for node in root.child:
         if node.score > bestScore:
             bestScore = node.score
             bestNode = node
 
-    print(root.child)
+    board_print(bestNode.board)
+    return bestNode.move
     
-
-# def move(board: list, player: int, remain_time):
-#     pass
-
-def board_print(board):
-    for i in [0, 1, 2, 3, 4]:
-        print("[{}]".format(i), ":", end=" ")
-        for j in range(5):
-            if board[i][j] == -1:
-                print("{}".format(board[i][j]), end=" ")
-            else:
-                print(" {}".format(board[i][j]), end=" ")
-        print()
-    print("     ", "[0", " 1", " 2", " 3", " 4]")
-    print("")
+def move(board: list, player: int, remain_time):
+    pass
 
 board = [
     [ 1, 1, 1, 1, 1],
@@ -122,6 +118,25 @@ board = [
     [-1,-1,-1,-1,-1]
 ]
 
-move(board, -1)
+board0 = [
+    [ 1, 1,-1,-1,-1],
+    [ 1, 1,-1, 0,-1],
+    [-1,-1, 0, 0,-1],
+    [-1, 0,-1, 0,-1],
+    [-1,-1,-1,-1,-1]
+]
+
+small_board = [
+    [ 1, 1, 1, 0, 0],
+    [ 1, 0, 1, 0, 0],
+    [-1,-1,-1, 0, 0],
+    [ 0, 0, 0, 0, 0],
+    [ 0, 0, 0, 0, 0]
+]
+
+x = time.time()
+print(moveNoTime(board0, -1))
+# board_print(make_a_move(board0, (3, 2), (2, 2)))
+print(f"time: {time.time() - x}")
 
 

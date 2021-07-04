@@ -289,3 +289,15 @@ def make_a_move(board: list, current_pos: tuple, next_pos: tuple) -> int:
         board[piece[0]][piece[1]] = player
 
     return board
+
+def board_print(board):
+    for i in [0, 1, 2, 3, 4]:
+        print("[{}]".format(i), ":", end=" ")
+        for j in range(5):
+            if board[i][j] == -1:
+                print("{}".format(board[i][j]), end=" ")
+            else:
+                print(" {}".format(board[i][j]), end=" ")
+        print()
+    print("     ", "[0", " 1", " 2", " 3", " 4]")
+    print("")
