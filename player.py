@@ -4,9 +4,9 @@ import random
 from mytool import *
 import time
 
-C = 2               # constant for ucb function
-rollOutTime = 500   # number of roll out time
-buildTreeTime = 100 # decide the amount of time to build tree
+C = 5               # constant for ucb function
+rollOutTime = 100   # number of roll out time
+buildTreeTime = 500 # decide the amount of time to build tree
 
 class treeNode():
     def __init__(self, board: list, visit: int, score: int, oldPos: tuple, newPos: tuple):
@@ -16,10 +16,11 @@ class treeNode():
         self.move = (oldPos, newPos)
         self.child = []
 
-def ucb(node: treeNode) -> int:
-    if node.visit == 0:
-        return 999
-    return node.score + C * sqrt(log(node.visit) / node.visit)
+def ucb(node: treeNode, childIndex: int) -> int:
+    child = node.child[childIndex]
+    if child.visit == 0:
+        return 9999
+    return node.score + C * sqrt(log(node.visit) / child.visit)
 
 def rollOut(board: list, player: int, n: int) -> int:
     """
@@ -53,12 +54,41 @@ def rollOut(board: list, player: int, n: int) -> int:
 
     return score
 
+def generateMoves(board: list, player: int):
+    moveList = []
+    for i in range(5):
+        for j in range(5):
+            if board[i][j] == player:
+                for lm in legal_move(board, (i, j)):
+                    moveList.append(((i,j), lm))
+    return moveList
+
+def roolOut(board: list, player: int, n: int) -> int:
+    currBoard = copy.deepcopy(board)
+    for t in range(n):  # simulate in n moves
+        avalableMove = generateMoves(currBoard, player)
+        if len(avalableMove) == 0:
+            break 
+        nextMove = random.choice(avalableMove)
+        currBoard = make_a_move(currBoard, nextMove[0], nextMove[1])
+        player = -player
+    
+    score = 0
+    for i in range(5):
+        for j in range(5):
+            if currBoard[i][j] == player:
+                score += 1
+            elif currBoard[i][j] == -player:
+                score -= 1
+
+    return score
+
 def buildTree(node: treeNode, player: int) -> int:
     currNode = node
     score = 0
     if len(node.child) == 0:    # check if this is leaf node, 0 mean leaf node
         if node.visit == 0:     # check if this node has been visited before, 0 mean hasn't
-            score = rollOut(node.board, -1, rollOutTime)
+            score = roolOut(node.board, -1, rollOutTime)
         else:
             # currBoard = copy.deepcopy(currNode.board)
             thereIsPlayer = False   # this variable is used to check if there is our player in the 
@@ -78,11 +108,11 @@ def buildTree(node: treeNode, player: int) -> int:
     else:
         maxUcb = -1
         bestNode = None
-        for n in node.child:
-            temp = ucb(n)
+        for i in range(len(node.child)):
+            temp = ucb(node, i)
             if temp > maxUcb:
                 maxUcb = temp
-                bestNode = n
+                bestNode = node.child[i]
         if bestNode != None:
             score = buildTree(bestNode, player)
         else: score = buildTree(node.child[0], player)
@@ -92,10 +122,24 @@ def buildTree(node: treeNode, player: int) -> int:
     return score
 
 def moveNoTime(board: list, player: int):
+    old_board = moveNoTime.oldBoard
+    trap = None
+    if board != old_board:
+        trap = detectTrap(old_board, board, -player)
+        if trap != None and trap != -1:
+            for chess in possiblePos(trap):
+                if board[trap[0] + chess[0]][trap[1] + chess[1]] == player:
+                    moveNoTime.oldBoard = make_a_move(board, (trap[0] + chess[0], trap[1] + chess[1]), (trap[0], trap[1]))
+                    return (
+                        (trap[0] + chess[0], trap[1] + chess[1]),
+                        (trap[0], trap[1]),
+                    )
+
+
     root = treeNode(board, 0, 0, (), ())
     
     for i in range(buildTreeTime):
-        buildTree(root, -1)
+        buildTree(root, player)
     
     bestScore = -9999
     bestNode = None
@@ -105,8 +149,21 @@ def moveNoTime(board: list, player: int):
             bestNode = node
 
     board_print(bestNode.board)
-    return bestNode.move
+    if (bestNode != None):
+        bestMove = bestNode.move
+        move.oldBoard = make_a_move(board, bestMove[0], bestMove[1])
+        return bestMove
+    else: 
+        return None
     
+moveNoTime.oldBoard = [
+        [ 1, 1, 1, 1, 1],
+        [ 1, 0,-1, 0, 1],
+        [ 1, 0, 0, 0,-1],
+        [-1, 0, 0, 0,-1],
+        [-1,-1,-1,-1,-1]
+    ]
+
 def move(board: list, player: int, remain_time):
     pass
 
@@ -126,6 +183,14 @@ board0 = [
     [-1,-1,-1,-1,-1]
 ]
 
+board1 = [
+    [ 1, 1, 0, 1, 1],
+    [ 1, 1,-1, 0, 1],
+    [ 1, 0, 0, 0,-1],
+    [-1, 0, 0, 0,-1],
+    [-1,-1,-1,-1,-1]
+]
+
 small_board = [
     [ 1, 1, 1, 0, 0],
     [ 1, 0, 1, 0, 0],
@@ -136,7 +201,6 @@ small_board = [
 
 x = time.time()
 print(moveNoTime(board0, -1))
-# board_print(make_a_move(board0, (3, 2), (2, 2)))
 print(f"time: {time.time() - x}")
 
 

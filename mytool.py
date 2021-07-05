@@ -290,6 +290,37 @@ def make_a_move(board: list, current_pos: tuple, next_pos: tuple) -> int:
 
     return board
 
+def detectTrap(oldBoard: list, newBoard: list, player: int):
+    """return the possition of the trap. if no trap, return None
+    the parameter "player" is the player who placed the trap
+    """
+    oldPlayerCount = 0
+    newPlayerCount = 0
+    trapPos = None
+    for i in range(0, 5):
+        for j in range(0, 5):
+            if oldBoard[i][j] == player:
+                oldPlayerCount += 1
+                if newBoard[i][j] == 0:
+                    trapPos = (i, j)
+            if newBoard[i][j] == player:
+                newPlayerCount += 1
+
+    if oldPlayerCount < newPlayerCount:
+        return None
+    if trapPos == None:
+        return -1
+        raise Exception(f"The player is not moving!!!\nOld board : \n{oldBoard}\nNew board: \n{newBoard}")
+        # return None
+
+    possiPos = possiblePos(trapPos)
+    for (x, y) in possiPos:
+        if (-x, -y) in possiPos and newBoard[trapPos[0] + x][
+            trapPos[1] + y] == newBoard[trapPos[0] - x][trapPos[1] - y] == player:
+            return trapPos
+
+    return None
+
 def board_print(board):
     for i in [0, 1, 2, 3, 4]:
         print("[{}]".format(i), ":", end=" ")
